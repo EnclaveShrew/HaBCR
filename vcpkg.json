@@ -1,0 +1,13 @@
+{
+  "name": "habcr",
+  "version-string": "1.0.0",
+  "description": "Havok-Aware Bullet Counted Reload - Shell-by-shell reload for Fallout 4",
+  "homepage": "https://github.com/Ryan-rsm-McKenzie/CommonLibF4",
+  "license": "MIT",
+  "dependencies": [
+    "boost-stl-interfaces",
+    "fmt",
+    "rsm-mmio",
+    "spdlog"
+  ]
+}

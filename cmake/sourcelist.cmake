@@ -1,0 +1,9 @@
+set(SOURCES
+	src/PCH.h
+	src/main.cpp
+	src/ReloadState.h
+	src/Hooks.h
+	src/Hooks.cpp
+	src/InputHandler.h
+	src/InputHandler.cpp
+)
