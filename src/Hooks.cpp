@@ -6,6 +6,19 @@ namespace HaBCR
 static void OverwriteLocalTime(RE::hkbClipGenerator *clipGen, float time);
 void BCRGotoReloadEnd();
 
+static RE::BSTEventSource<RE::TESEquipEvent> *GetTESEquipEventSource()
+{
+    if (REX::FModule::IsRuntimeOG())
+    {
+        static REL::Relocation<RE::BSTEventSource<RE::TESEquipEvent> *> singleton{REL::ID(485633)};
+        return singleton.get();
+    }
+
+    using func_t = RE::BSTEventSource<RE::TESEquipEvent> &(*)();
+    static REL::Relocation<func_t> func{REL::ID(2201837)};
+    return std::addressof(func());
+}
+
 void ReloadState::Reset()
 {
     activeClipGenerator = nullptr;
@@ -847,15 +860,9 @@ class EquipEventSink : public RE::BSTEventSink<RE::TESEquipEvent>
                                           RE::BSTEventSource<RE::TESEquipEvent> *) override
     {
         auto *player = RE::PlayerCharacter::GetSingleton();
-#if defined(HABCR_VARIANT_AE)
         auto *eventActor = a_event.actor.get();
         const bool eventEquipped = a_event.equipped;
         const std::uint32_t eventFormId = a_event.baseObject;
-#else
-        auto *eventActor = a_event.a;
-        const bool eventEquipped = a_event.isEquip;
-        const std::uint32_t eventFormId = a_event.formId;
-#endif
         if (!player || eventActor != player)
         {
             return RE::BSEventNotifyControl::kContinue;
@@ -895,11 +902,7 @@ class EquipEventSink : public RE::BSTEventSink<RE::TESEquipEvent>
 
 void RegisterEquipEventSink()
 {
-#if defined(HABCR_VARIANT_AE)
-    RE::GetTESEquipEventSource().RegisterSink(EquipEventSink::GetSingleton());
-    LOG_INFO("EquipEvent sink registered");
-#else
-    auto *source = RE::EquipEventSource::GetSingleton();
+    auto *source = GetTESEquipEventSource();
     if (source)
     {
         source->RegisterSink(EquipEventSink::GetSingleton());
@@ -909,7 +912,6 @@ void RegisterEquipEventSink()
     {
         logger::error("Failed to get EquipEventSource");
     }
-#endif
 }
 
-}
+} // namespace HaBCR

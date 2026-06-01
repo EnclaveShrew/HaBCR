@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-# ---- Options ----
-
 option(COPY_BUILD "Copy the build output to the Fallout 4 directory." OFF)
-
-# ---- Cache build vars ----
 
 macro(set_from_environment VARIABLE)
 	if (NOT DEFINED ${VARIABLE} AND DEFINED ENV{${VARIABLE}})
@@ -13,41 +9,27 @@ macro(set_from_environment VARIABLE)
 endmacro()
 
 set_from_environment(Fallout4Path)
-set_from_environment(VCPKG_INSTALLATION_ROOT)
+set_from_environment(VCPKG_ROOT)
 
-if (DEFINED VCPKG_INSTALLATION_ROOT)
-	set(CMAKE_TOOLCHAIN_FILE "${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+if (DEFINED VCPKG_ROOT)
+	set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 	set(VCPKG_TARGET_TRIPLET "x64-windows-static-md" CACHE STRING "")
 	set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "")
 else ()
 	message(
 		WARNING
-		"Variable VCPKG_INSTALLATION_ROOT is not set. Continuing without vcpkg."
+		"Variable VCPKG_ROOT is not set. Continuing without vcpkg."
 	)
 endif ()
 
 set(Boost_USE_STATIC_RUNTIME OFF CACHE BOOL "")
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "")
 
-# ---- Project ----
-
 project(
 	HaBCR
 	VERSION 1.0.0
 	LANGUAGES CXX
 )
-
-# ---- Variant detection (OG vs AE) ----
-# Umbrella build (parent adds OG CommonLibF4 first) → OG variant
-# Standalone build (HaBCR pulls AE CommonLibF4 via add_subdirectory) → AE variant
-
-if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-	set(HABCR_VARIANT "AE")
-	message(STATUS "HaBCR variant: AE (standalone build, targets Fallout 4 1.11.191)")
-else()
-	set(HABCR_VARIANT "OG")
-	message(STATUS "HaBCR variant: OG (umbrella build, targets Fallout 4 1.10.163)")
-endif()
 
 configure_file(
 	${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.h.in
@@ -61,8 +43,6 @@ configure_file(
 	@ONLY
 )
 
-# ---- Include guards ----
-
 if (PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
 	message(
 		FATAL_ERROR
@@ -70,13 +50,9 @@ if (PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
 	)
 endif ()
 
-# ---- Globals ----
-
 if (MSVC)
 	if (NOT ${CMAKE_GENERATOR} STREQUAL "Ninja")
-		add_compile_options(
-			/MP	# Build with Multiple Processes
-		)
+		add_compile_options(/MP)
 	endif ()
 endif ()
 
@@ -85,16 +61,16 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF)
 
 set(Boost_USE_STATIC_LIBS ON)
 
-# ---- Dependencies ----
+set(
+	CommonLibF4Unified_DIR
+	"D:/CommonLibF4-Unified/cmake"
+	CACHE PATH
+	"Path to the CommonLibF4 Unified CMake package"
+)
 
-if (NOT TARGET CommonLibF4)
-	add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../CommonLibF4-AE/CommonLibF4" CommonLibF4)
-endif ()
+find_package(CommonLibF4Unified REQUIRED CONFIG)
+include("${CMAKE_CURRENT_SOURCE_DIR}/../tools/cmake/CommonLibF4Projects.cmake")
 
-find_package(fmt REQUIRED CONFIG)
-find_package(spdlog REQUIRED CONFIG)
-
-# ---- Add source files ----
 
 include(cmake/sourcelist.cmake)
 
@@ -108,8 +84,6 @@ source_group(
 	FILES ${CMAKE_CURRENT_BINARY_DIR}/include/Version.h
 )
 
-# ---- Create DLL ----
-
 add_library(
 	${PROJECT_NAME}
 	SHARED
@@ -122,12 +96,7 @@ target_compile_definitions(
 	${PROJECT_NAME}
 	PRIVATE
 		_UNICODE
-		HABCR_VARIANT_${HABCR_VARIANT}=1
 )
-
-if(HABCR_VARIANT STREQUAL "AE")
-	set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "HaBCR_AE")
-endif()
 
 target_compile_features(
 	${PROJECT_NAME}
@@ -142,12 +111,19 @@ target_include_directories(
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
+commonlibf4_projects_add_simpleini(${PROJECT_NAME})
+
 target_link_libraries(
 	${PROJECT_NAME}
 	PRIVATE
-		CommonLibF4::CommonLibF4
-		fmt::fmt
-		spdlog::spdlog
+		CommonLibF4Unified::CommonLibF4
+)
+
+commonlibf4_unified_add_plugin_version(
+	${PROJECT_NAME}
+	NAME ${PROJECT_NAME}
+	VERSION ${PROJECT_VERSION}
+	COMPATIBLE_RUNTIMES OG AE
 )
 
 target_precompile_headers(
@@ -160,31 +136,25 @@ if (MSVC)
 	target_compile_options(
 		${PROJECT_NAME}
 		PRIVATE
-			/sdl	# Enable Additional Security Checks
-			/utf-8	# Set Source and Executable character sets to UTF-8
-			/Zi	# Debug Information Format
-
-			/permissive-	# Standards conformance
-			/Zc:preprocessor	# Enable preprocessor conformance mode
-
-			/W4	# Warning level
-			/WX	# Warning level (warnings are errors)
-
+			/sdl
+			/utf-8
+			/Zi
+			/permissive-
+			/Zc:preprocessor
+			/W4
+			/WX
 			"$<$<CONFIG:DEBUG>:>"
-			"$<$<CONFIG:RELEASE>:/Zc:inline;/JMC-;/Ob3>"
+			"$<$<CONFIG:RELEASE>:/Zc:inline;/JMC->"
 	)
 
 	target_link_options(
 		${PROJECT_NAME}
 		PRIVATE
-			/WX	# Treat Linker Warnings as Errors
-
+			/WX
 			"$<$<CONFIG:DEBUG>:/INCREMENTAL;/OPT:NOREF;/OPT:NOICF>"
 			"$<$<CONFIG:RELEASE>:/INCREMENTAL:NO;/OPT:REF;/OPT:ICF;/DEBUG:FULL>"
 	)
 endif ()
-
-# ---- File copying ----
 
 if (COPY_BUILD)
 	if (DEFINED Fallout4Path)
@@ -202,29 +172,28 @@ if (COPY_BUILD)
 	endif ()
 endif ()
 
-# ---- Build artifacts ----
-
 set(SCRIPT "scripts/archive_artifacts.py")
+set(ARTIFACT_TARGET "create_artifact_${PROJECT_NAME}")
 
 if (NOT TARGET create_artifact)
-	add_custom_target(
-		create_artifact
-		COMMAND
-			"${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}"
-			"--name=\"${PROJECT_NAME}\""
-			"--dll=\"$<TARGET_FILE:${PROJECT_NAME}>\""
-			"--pdb=\"$<TARGET_PDB_FILE:${PROJECT_NAME}>\""
-		WORKING_DIRECTORY
-			${CMAKE_CURRENT_BINARY_DIR}
-		SOURCES
-			${SCRIPT}
-	)
+	add_custom_target(create_artifact)
 endif ()
 
-add_dependencies(
-	create_artifact
-	${PROJECT_NAME}
+add_custom_target(
+	${ARTIFACT_TARGET}
+	COMMAND
+		"${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}"
+		"--name=\"${PROJECT_NAME}\""
+		"--dll=\"$<TARGET_FILE:${PROJECT_NAME}>\""
+		"--pdb=\"$<TARGET_PDB_FILE:${PROJECT_NAME}>\""
+	WORKING_DIRECTORY
+		${CMAKE_CURRENT_BINARY_DIR}
+	SOURCES
+		${SCRIPT}
 )
+
+add_dependencies(${ARTIFACT_TARGET} ${PROJECT_NAME})
+add_dependencies(create_artifact ${ARTIFACT_TARGET})
 
 source_group(
 	TREE ${CMAKE_CURRENT_SOURCE_DIR}

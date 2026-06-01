@@ -1,7 +1,9 @@
 set(SOURCES
 	src/PCH.h
 	src/main.cpp
+	src/Settings.h
 	src/ReloadState.h
+	src/HkCompat.h
 	src/Hooks.h
 	src/Hooks.cpp
 	src/InputHandler.h

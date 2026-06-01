@@ -1,97 +1,79 @@
 #pragma once
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #pragma warning(push)
 #include "F4SE/F4SE.h"
 #include "RE/Fallout.h"
 
-#if defined(HABCR_VARIANT_AE)
-#include "RE/Bethesda/BShkbAnimationGraph.h"
-#include "RE/Bethesda/EquipEventSource.h"
-#include "RE/Havok/hkaAnimation.h"
-#include "RE/Havok/hkaAnnotationTrack.h"
-#include "RE/Havok/hkbBehaviorGraph.h"
-#include "RE/Havok/hkbCharacter.h"
-#include "RE/Havok/hkbClipGenerator.h"
-#include "RE/Havok/hkbNodeInfo.h"
-#include "RE/Havok/hkbStateMachine.h"
-#endif
-
-#include "../../Utilities/SimpleIni.h"
+#include "SimpleIni.h"
 
 #ifdef NDEBUG
 #include <spdlog/sinks/basic_file_sink.h>
 #else
 #include <spdlog/sinks/msvc_sink.h>
 #endif
+#include <ShlObj.h>
+#include <filesystem>
+#include <format>
+#include <memory>
+#include <optional>
+#include <spdlog/spdlog.h>
+#include <utility>
 #pragma warning(pop)
 
 #define DLLEXPORT __declspec(dllexport)
 
-#if defined(HABCR_VARIANT_AE)
-
 namespace logger
 {
-template <class... T> struct info
+template <class... Args> void trace(spdlog::format_string_t<Args...> a_fmt, Args &&...a_args)
 {
-    info() = delete;
-    explicit info(std::format_string<T...> a_fmt, T &&...a_args,
-                  std::source_location a_loc = std::source_location::current())
-    {
-        REX::Impl::Log(a_loc, REX::ELogLevel::Info, a_fmt, std::forward<T>(a_args)...);
-    }
-};
-template <class... T> info(std::format_string<T...>, T &&...) -> info<T...>;
-
-template <class... T> struct error
-{
-    error() = delete;
-    explicit error(std::format_string<T...> a_fmt, T &&...a_args,
-                   std::source_location a_loc = std::source_location::current())
-    {
-        REX::Impl::Log(a_loc, REX::ELogLevel::Error, a_fmt, std::forward<T>(a_args)...);
-    }
-};
-template <class... T> error(std::format_string<T...>, T &&...) -> error<T...>;
-
-template <class... T> struct critical
-{
-    critical() = delete;
-    explicit critical(std::format_string<T...> a_fmt, T &&...a_args,
-                      std::source_location a_loc = std::source_location::current())
-    {
-        REX::Impl::Log(a_loc, REX::ELogLevel::Critical, a_fmt, std::forward<T>(a_args)...);
-    }
-};
-template <class... T> critical(std::format_string<T...>, T &&...) -> critical<T...>;
-
-template <class... T> struct warn
-{
-    warn() = delete;
-    explicit warn(std::format_string<T...> a_fmt, T &&...a_args,
-                  std::source_location a_loc = std::source_location::current())
-    {
-        REX::Impl::Log(a_loc, REX::ELogLevel::Warning, a_fmt, std::forward<T>(a_args)...);
-    }
-};
-template <class... T> warn(std::format_string<T...>, T &&...) -> warn<T...>;
-
-template <class... T> struct debug
-{
-    debug() = delete;
-    explicit debug(std::format_string<T...> a_fmt, T &&...a_args,
-                   std::source_location a_loc = std::source_location::current())
-    {
-        REX::Impl::Log(a_loc, REX::ELogLevel::Debug, a_fmt, std::forward<T>(a_args)...);
-    }
-};
-template <class... T> debug(std::format_string<T...>, T &&...) -> debug<T...>;
+    spdlog::trace(a_fmt, std::forward<Args>(a_args)...);
 }
 
-#else
+template <class... Args> void debug(spdlog::format_string_t<Args...> a_fmt, Args &&...a_args)
+{
+    spdlog::debug(a_fmt, std::forward<Args>(a_args)...);
+}
 
-namespace logger = F4SE::log;
+template <class... Args> void info(spdlog::format_string_t<Args...> a_fmt, Args &&...a_args)
+{
+    spdlog::info(a_fmt, std::forward<Args>(a_args)...);
+}
 
-#endif
+template <class... Args> void warn(spdlog::format_string_t<Args...> a_fmt, Args &&...a_args)
+{
+    spdlog::warn(a_fmt, std::forward<Args>(a_args)...);
+}
+
+template <class... Args> void error(spdlog::format_string_t<Args...> a_fmt, Args &&...a_args)
+{
+    spdlog::error(a_fmt, std::forward<Args>(a_args)...);
+}
+
+template <class... Args> void critical(spdlog::format_string_t<Args...> a_fmt, Args &&...a_args)
+{
+    spdlog::critical(a_fmt, std::forward<Args>(a_args)...);
+}
+
+[[nodiscard]] inline std::optional<std::filesystem::path> log_directory()
+{
+    wchar_t *buffer{nullptr};
+    const auto result =
+        SHGetKnownFolderPath(FOLDERID_Documents, KNOWN_FOLDER_FLAG::KF_FLAG_DEFAULT, nullptr, std::addressof(buffer));
+    std::unique_ptr<wchar_t[], decltype(&CoTaskMemFree)> knownPath(buffer, CoTaskMemFree);
+    if (!knownPath || result != S_OK)
+    {
+        return std::nullopt;
+    }
+
+    std::filesystem::path path = knownPath.get();
+    path /= L"My Games/Fallout4/F4SE";
+    return path;
+}
+} // namespace logger
 
 using namespace std::literals;
 
