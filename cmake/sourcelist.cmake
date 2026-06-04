@@ -4,6 +4,8 @@ set(SOURCES
 	src/Settings.h
 	src/ReloadState.h
 	src/HkCompat.h
+	src/HaBCRCompat.h
+	src/HaBCRCompat.cpp
 	src/Hooks.h
 	src/Hooks.cpp
 	src/InputHandler.h

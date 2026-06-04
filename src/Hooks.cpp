@@ -15,7 +15,7 @@ static RE::BSTEventSource<RE::TESEquipEvent> *GetTESEquipEventSource()
     }
 
     using func_t = RE::BSTEventSource<RE::TESEquipEvent> &(*)();
-    static REL::Relocation<func_t> func{REL::ID(2201837)};
+    static REL::Relocation<func_t> func{REL::ID(2201838)};
     return std::addressof(func());
 }
 
@@ -42,6 +42,7 @@ void ReloadState::Reset()
     stopPressed = false;
     waitingReloadEnd = false;
     deferredCapacityRestore = 0;
+    ammoSwitchInProgress = false;
 
     if (g_habcrMarkerAVIF)
     {
@@ -191,6 +192,7 @@ void FillEquipDataFromEquippedItem()
 {
     g_reloadState.weapInstance = nullptr;
     g_reloadState.ammoCapacity = 0;
+    g_reloadState.equippedWeaponFormID = 0;
 
     auto *player = RE::PlayerCharacter::GetSingleton();
     if (!player || !player->currentProcess || !player->currentProcess->middleHigh)
@@ -229,6 +231,10 @@ void FillEquipDataFromEquippedItem()
 
         g_reloadState.weapInstance = inst;
         g_reloadState.ammoCapacity = inst->ammoCapacity;
+        if (item.item.object && item.item.object->GetFormType() == RE::ENUM_FORM_ID::kWEAP)
+        {
+            g_reloadState.equippedWeaponFormID = item.item.object->GetFormID();
+        }
         return;
     }
 }
@@ -882,6 +888,13 @@ class EquipEventSink : public RE::BSTEventSink<RE::TESEquipEvent>
         auto *weap = static_cast<RE::TESObjectWEAP *>(form);
 
         LOG_INFO("Equipped weapon: {} (FormID: {:08X})", weap->GetFullName(), weap->GetFormID());
+
+        if (g_reloadState.ammoSwitchInProgress && g_reloadState.IsReloading() &&
+            g_reloadState.equippedWeaponFormID != 0 && eventFormId == g_reloadState.equippedWeaponFormID)
+        {
+            LOG_INFO("Ignored same-weapon equip event during ammo switch");
+            return RE::BSEventNotifyControl::kContinue;
+        }
 
         if (g_reloadState.IsReloading())
         {

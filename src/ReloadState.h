@@ -47,6 +47,8 @@ struct ReloadState
     bool waitingReloadEnd{false};
 
     std::uint16_t deferredCapacityRestore{0};
+    std::uint32_t equippedWeaponFormID{0};
+    bool ammoSwitchInProgress{false};
 
     void Reset();
 
@@ -87,4 +89,4 @@ struct ReloadState
 };
 
 inline ReloadState g_reloadState;
-}
+} // namespace HaBCR
