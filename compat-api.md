@@ -16,6 +16,16 @@ Return values:
 
 HaBCR does not report original BCR state through this API.
 
+This is an active reload query. HaBCR detects the mode by scanning the active reload animation clip after `reloadStateEnter`, so this function does not report whether an equipped weapon will support HaBCR before its reload animation starts.
+
+## BCR-Compatible Setting
+
+```cpp
+bool HaBCR_IsBCRCompatibleEnabled();
+```
+
+Returns the current `bBCRCompatible` setting loaded from `HaBCR.ini`. Consumers can use this with their own BCR weapon detection or cache. HaBCR does not provide a pre-reload HaBCR weapon capability query.
+
 ## Ammo Capacity
 
 ```cpp
@@ -43,5 +53,7 @@ Recommended order:
 4. Call `HaBCR_EndAmmoSwitch()`.
 
 While ammo switch suppress is active, HaBCR ignores same-weapon equip events so the running reload sequence is not reset. A different weapon equip event still ends the reload normally.
+
+During a suppressed same-weapon equip event, HaBCR refreshes the equipped weapon instance data so ammo switches do not leave the compatibility API using a stale weapon instance pointer.
 
 `totalAmmoCount` means loaded ammo plus reserve ammo. HaBCR converts it to reserve ammo with `max(totalAmmoCount - loadedAmmoCount, 0)`.

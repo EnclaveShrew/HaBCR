@@ -11,6 +11,7 @@
 
 extern "C" HABCR_COMPAT_API std::uint32_t HaBCR_GetCurrentReloadMode();
 extern "C" HABCR_COMPAT_API bool HaBCR_SetAmmoCapacity(std::uint32_t a_capacity);
+extern "C" HABCR_COMPAT_API bool HaBCR_IsBCRCompatibleEnabled();
 extern "C" HABCR_COMPAT_API bool HaBCR_BeginAmmoSwitch();
 extern "C" HABCR_COMPAT_API bool HaBCR_EndAmmoSwitch();
 extern "C" HABCR_COMPAT_API bool HaBCR_UpdateAmmoStateAfterSwitch(std::uint32_t a_loadedAmmoCount,

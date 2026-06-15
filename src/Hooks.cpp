@@ -869,6 +869,7 @@ class EquipEventSink : public RE::BSTEventSink<RE::TESEquipEvent>
         auto *eventActor = a_event.actor.get();
         const bool eventEquipped = a_event.equipped;
         const std::uint32_t eventFormId = a_event.baseObject;
+
         if (!player || eventActor != player)
         {
             return RE::BSEventNotifyControl::kContinue;
@@ -892,6 +893,7 @@ class EquipEventSink : public RE::BSTEventSink<RE::TESEquipEvent>
         if (g_reloadState.ammoSwitchInProgress && g_reloadState.IsReloading() &&
             g_reloadState.equippedWeaponFormID != 0 && eventFormId == g_reloadState.equippedWeaponFormID)
         {
+            FillEquipDataFromEquippedItem();
             LOG_INFO("Ignored same-weapon equip event during ammo switch");
             return RE::BSEventNotifyControl::kContinue;
         }

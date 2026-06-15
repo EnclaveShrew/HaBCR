@@ -1,5 +1,6 @@
 #include "HaBCRCompat.h"
 #include "Hooks.h"
+#include "Settings.h"
 
 #include <limits>
 
@@ -59,6 +60,11 @@ extern "C" HABCR_COMPAT_API bool HaBCR_SetAmmoCapacity(std::uint32_t a_capacity)
     state.ammoCapacity = static_cast<std::uint16_t>(a_capacity);
     ReapplyCurrentCapacity();
     return true;
+}
+
+extern "C" HABCR_COMPAT_API bool HaBCR_IsBCRCompatibleEnabled()
+{
+    return HaBCR::Settings::GetSingleton()->bcrCompatible;
 }
 
 extern "C" HABCR_COMPAT_API bool HaBCR_BeginAmmoSwitch()
